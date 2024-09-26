@@ -74,13 +74,13 @@
     "HelloLogGroup": {
       "Type": "AWS::Logs::LogGroup",
       "Properties": {
-        "LogGroupName": "/aws/lambda/my-serverless-api-dev-hello"
+        "LogGroupName": "/aws/lambda/awd-web-hook-service-dev-hello"
       }
     },
     "CreateUserLogGroup": {
       "Type": "AWS::Logs::LogGroup",
       "Properties": {
-        "LogGroupName": "/aws/lambda/my-serverless-api-dev-createUser"
+        "LogGroupName": "/aws/lambda/awd-web-hook-service-dev-createUser"
       }
     },
     "IamRoleLambdaExecution": {
@@ -108,7 +108,7 @@
               "Fn::Join": [
                 "-",
                 [
-                  "my-serverless-api",
+                  "awd-web-hook-service",
                   "dev",
                   "lambda"
                 ]
@@ -126,7 +126,7 @@
                   ],
                   "Resource": [
                     {
-                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/my-serverless-api-dev*:*"
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/awd-web-hook-service-dev*:*"
                     }
                   ]
                 },
@@ -137,8 +137,18 @@
                   ],
                   "Resource": [
                     {
-                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/my-serverless-api-dev*:*:*"
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/awd-web-hook-service-dev*:*:*"
                     }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "xray:PutTraceSegments",
+                    "xray:PutTelemetryRecords"
+                  ],
+                  "Resource": [
+                    "*"
                   ]
                 }
               ]
@@ -150,7 +160,7 @@
           "Fn::Join": [
             "-",
             [
-              "my-serverless-api",
+              "awd-web-hook-service",
               "dev",
               {
                 "Ref": "AWS::Region"
@@ -168,13 +178,22 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/my-serverless-api/dev/1727109267173-2024-09-23T16:34:27.173Z/my-serverless-api.zip"
+          "S3Key": "serverless/awd-web-hook-service/dev/1727341178347-2024-09-26T08:59:38.347Z/awd-web-hook-service.zip"
         },
         "Handler": "handler.hello",
         "Runtime": "nodejs20.x",
-        "FunctionName": "my-serverless-api-dev-hello",
+        "FunctionName": "awd-web-hook-service-dev-hello",
         "MemorySize": 1024,
         "Timeout": 6,
+        "TracingConfig": {
+          "Mode": "Active"
+        },
+        "Environment": {
+          "Variables": {
+            "USER_POOL_ID": "us-east-1_Yj2PaXmX8",
+            "CLIENT_ID": "cl94ea0m0t2dqp7eeifn4rrpn"
+          }
+        },
         "Role": {
           "Fn::GetAtt": [
             "IamRoleLambdaExecution",
@@ -193,13 +212,22 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/my-serverless-api/dev/1727109267173-2024-09-23T16:34:27.173Z/my-serverless-api.zip"
+          "S3Key": "serverless/awd-web-hook-service/dev/1727341178347-2024-09-26T08:59:38.347Z/awd-web-hook-service.zip"
         },
         "Handler": "handler.createUser",
         "Runtime": "nodejs20.x",
-        "FunctionName": "my-serverless-api-dev-createUser",
+        "FunctionName": "awd-web-hook-service-dev-createUser",
         "MemorySize": 1024,
         "Timeout": 6,
+        "TracingConfig": {
+          "Mode": "Active"
+        },
+        "Environment": {
+          "Variables": {
+            "USER_POOL_ID": "us-east-1_Yj2PaXmX8",
+            "CLIENT_ID": "cl94ea0m0t2dqp7eeifn4rrpn"
+          }
+        },
         "Role": {
           "Fn::GetAtt": [
             "IamRoleLambdaExecution",
@@ -211,7 +239,7 @@
         "CreateUserLogGroup"
       ]
     },
-    "HelloLambdaVersionz9CLDzd10gjd4sJ4pej2iaSletDsdt7Ee19VLMFrr00": {
+    "HelloLambdaVersion65X54mH8qi8AZiND6XyAUGdKBhtVwcjUvwurQ1xE": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
@@ -221,7 +249,7 @@
         "CodeSha256": "9wI5oWiynORwx5leZV2FWtGDMMZgUrxg4y0tNeeMklY="
       }
     },
-    "CreateUserLambdaVersionSy5PoYszOkgaSgIimJ16dwQs4v6TG0o5qLrX79WC6ls": {
+    "CreateUserLambdaVersionr0avF9KydGdgHkPVSfl63kjVkNGqFR7UgyEisAaYG0": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
@@ -234,7 +262,7 @@
     "ApiGatewayRestApi": {
       "Type": "AWS::ApiGateway::RestApi",
       "Properties": {
-        "Name": "dev-my-serverless-api",
+        "Name": "dev-awd-web-hook-service",
         "EndpointConfiguration": {
           "Types": [
             "EDGE"
@@ -285,7 +313,13 @@
           "Ref": "ApiGatewayRestApi"
         },
         "ApiKeyRequired": false,
-        "AuthorizationType": "NONE",
+        "AuthorizationType": "COGNITO_USER_POOLS",
+        "AuthorizerId": {
+          "Ref": "ApiGatewayAuthorizer"
+        },
+        "AuthorizationScopes": [
+          "com.poc.hello/read"
+        ],
         "Integration": {
           "IntegrationHttpMethod": "POST",
           "Type": "AWS_PROXY",
@@ -331,7 +365,10 @@
           "Ref": "ApiGatewayRestApi"
         },
         "ApiKeyRequired": false,
-        "AuthorizationType": "NONE",
+        "AuthorizationType": "COGNITO_USER_POOLS",
+        "AuthorizerId": {
+          "Ref": "ApiGatewayAuthorizer"
+        },
         "Integration": {
           "IntegrationHttpMethod": "POST",
           "Type": "AWS_PROXY",
@@ -365,7 +402,7 @@
         "CreateUserLambdaPermissionApiGateway"
       ]
     },
-    "ApiGatewayDeployment1727109264584": {
+    "ApiGatewayDeployment1727341176123": {
       "Type": "AWS::ApiGateway::Deployment",
       "Properties": {
         "RestApiId": {
@@ -451,6 +488,33 @@
           ]
         }
       }
+    },
+    "ApiGatewayAuthorizer": {
+      "Type": "AWS::ApiGateway::Authorizer",
+      "Properties": {
+        "Name": "awd_authoriser",
+        "Type": "COGNITO_USER_POOLS",
+        "IdentitySource": "method.request.header.Authorization",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "ProviderARNs": [
+          "arn:aws:cognito-idp:us-east-1:441967199212:userpool/us-east-1_Yj2PaXmX8"
+        ]
+      }
+    },
+    "GatewayResponseDefault4XX": {
+      "Type": "AWS::ApiGateway::GatewayResponse",
+      "Properties": {
+        "ResponseParameters": {
+          "gatewayresponse.header.Access-Control-Allow-Origin": "'*'",
+          "gatewayresponse.header.Access-Control-Allow-Headers": "'*'"
+        },
+        "ResponseType": "DEFAULT_4XX",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
     }
   },
   "Outputs": {
@@ -459,25 +523,25 @@
         "Ref": "ServerlessDeploymentBucket"
       },
       "Export": {
-        "Name": "sls-my-serverless-api-dev-ServerlessDeploymentBucketName"
+        "Name": "sls-awd-web-hook-service-dev-ServerlessDeploymentBucketName"
       }
     },
     "HelloLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "HelloLambdaVersionz9CLDzd10gjd4sJ4pej2iaSletDsdt7Ee19VLMFrr00"
+        "Ref": "HelloLambdaVersion65X54mH8qi8AZiND6XyAUGdKBhtVwcjUvwurQ1xE"
       },
       "Export": {
-        "Name": "sls-my-serverless-api-dev-HelloLambdaFunctionQualifiedArn"
+        "Name": "sls-awd-web-hook-service-dev-HelloLambdaFunctionQualifiedArn"
       }
     },
     "CreateUserLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "CreateUserLambdaVersionSy5PoYszOkgaSgIimJ16dwQs4v6TG0o5qLrX79WC6ls"
+        "Ref": "CreateUserLambdaVersionr0avF9KydGdgHkPVSfl63kjVkNGqFR7UgyEisAaYG0"
       },
       "Export": {
-        "Name": "sls-my-serverless-api-dev-CreateUserLambdaFunctionQualifiedArn"
+        "Name": "sls-awd-web-hook-service-dev-CreateUserLambdaFunctionQualifiedArn"
       }
     },
     "ServiceEndpoint": {
@@ -503,7 +567,7 @@
         ]
       },
       "Export": {
-        "Name": "sls-my-serverless-api-dev-ServiceEndpoint"
+        "Name": "sls-awd-web-hook-service-dev-ServiceEndpoint"
       }
     }
   }
