@@ -11,6 +11,80 @@ provider:
     apiGateway: true
     lambda: true
 
+resources:
+  Resources:
+    ApiGatewayAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: awd_authoriser
+        Type: COGNITO_USER_POOLS
+        IdentitySource: method.request.header.Authorization
+        RestApiId: !Ref ApiGatewayRestApi
+        ProviderARNs:
+          - !GetAtt UserPool.Arn
+    AwdResourceServer:
+      Type: AWS::Cognito::UserPoolResourceServer
+      Properties:
+        UserPoolId: !Ref UserPool
+        Identifier: "awd.datacom.com"
+        Name: "AWD API"
+        Scopes: 
+          - ScopeName: "write"
+            ScopeDescription: "Write access"
+    UserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:service}-${self:provider.stage}-user-pool
+        AutoVerifiedAttributes:
+          - email
+        UsernameAttributes:
+          - email
+    UserPoolDomain:
+      Type: AWS::Cognito::UserPoolDomain
+      Properties:
+        Domain: ${self:service}-${self:provider.stage}-domain
+        UserPoolId: !Ref UserPool
+
+    UserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      DependsOn: AwdResourceServer
+      Properties:
+        ClientName: ${self:service}-${self:provider.stage}-client
+        UserPoolId: !Ref UserPool
+        GenerateSecret: true
+        ExplicitAuthFlows:
+          - ALLOW_REFRESH_TOKEN_AUTH
+          - ALLOW_USER_SRP_AUTH
+        AllowedOAuthFlows:
+          - client_credentials
+        AllowedOAuthFlowsUserPoolClient: true
+        AllowedOAuthScopes:
+          - "awd.datacom.com/write"
+        CallbackURLs:
+          - http://localhost:3000/callback
+        LogoutURLs:
+          - http://localhost:3000/logout
+        SupportedIdentityProviders:
+          - COGNITO
+
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: DEFAULT_4XX
+        RestApiId: !Ref ApiGatewayRestApi
+  Outputs:
+    UserPoolId:
+      Value: !Ref UserPool
+    UserPoolClientId:
+      Value: !Ref UserPoolClient
+    CognitoDomain:
+      Value: !Sub https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
+    TokenUrl:
+      Value: !Sub https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com/oauth2/token
+
 functions:
   hello:
     handler: handler.hello
@@ -20,86 +94,29 @@ functions:
           method: get
           authorizer:
             type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: ApiGatewayAuthorizer
+            authorizerId: !Ref ApiGatewayAuthorizer
             scopes:
-              - com.poc.hello/read
+              - "awd.datacom.com/write"
     environment:
-      USER_POOL_ID: ${self:custom.userPoolId}
-      CLIENT_ID: ${self:custom.userPoolClientId}
+      USER_POOL_ID: !Ref UserPool
+      CLIENT_ID: !Ref UserPoolClient
 
-  createUser:
-    handler: handler.createUser
-    events:
-      - http:
-          path: users
-          method: post
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId:
-              Ref: ApiGatewayAuthorizer
-    environment:
-      USER_POOL_ID: ${self:custom.userPoolId}
-      CLIENT_ID: ${self:custom.userPoolClientId}
-
-resources:
-  Resources:
-    ApiGatewayAuthorizer:
-      Type: AWS::ApiGateway::Authorizer
-      Properties:
-        Name: awd_authoriser
-        Type: COGNITO_USER_POOLS
-        IdentitySource: method.request.header.Authorization
-        RestApiId:
-          Ref: ApiGatewayRestApi
-        ProviderARNs:
-          - ${self:custom.userPoolArn}
-    # Dynamic User Pool creation
-    # UserPoolClient:
-    #   Type: AWS::Cognito::UserPoolClient
-    #   Properties:
-    #     ClientName: ${self:service}-${self:provider.stage}-client
-    #     UserPoolId: ${self:custom.userPoolId}
-    #     GenerateSecret: false
-    #     ExplicitAuthFlows:
-    #       - ALLOW_REFRESH_TOKEN_AUTH
-    #       - ALLOW_USER_SRP_AUTH
-    #     AllowedOAuthFlows:
-    #       - client_credentials
-    #     AllowedOAuthFlowsUserPoolClient: true
-    #     AllowedOAuthScopes:
-    #       - email
-    #       - openid
-    #       - profile
-    #     CallbackURLs:
-    #       - http://localhost:3000/callback
-    #     LogoutURLs:
-    #       - http://localhost:3000/logout
-    #     SupportedIdentityProviders:
-    #       - COGNITO
-
-    GatewayResponseDefault4XX:
-      Type: AWS::ApiGateway::GatewayResponse
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
-        ResponseType: DEFAULT_4XX
-        RestApiId:
-          Ref: ApiGatewayRestApi
+  # createUser:
+  #   handler: handler.createUser
+  #   events:
+  #     - http:
+  #         path: users
+  #         method: post
+  #         authorizer:
+  #           type: COGNITO_USER_POOLS
+  #           authorizerId: !Ref ApiGatewayAuthorizer
+  #   environment:
+  #     USER_POOL_ID: !Ref UserPool
+  #     CLIENT_ID: !Ref UserPoolClient
 
 plugins:
   - serverless-offline
 
 custom:
-  ap-southeast-2:
-    userPoolId: us-east-1_Yj2PaXmX8
-    userPoolClientId: cl94ea0m0t2dqp7eeifn4rrpn
-  us-east-1:
-    userPoolId: us-east-1_Yj2PaXmX8
-    userPoolClientId: cl94ea0m0t2dqp7eeifn4rrpn
-  userPoolId: ${self:custom.${self:provider.region}.userPoolId}
-  userPoolClientId: ${self:custom.${self:provider.region}.userPoolClientId}
-  userPoolArn: arn:aws:cognito-idp:us-east-1:441967199212:userpool/us-east-1_Yj2PaXmX8
   serverless-offline:
     httpPort: 3000
