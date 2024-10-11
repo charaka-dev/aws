@@ -10,7 +10,7 @@ module.exports.hello = async (event) => {
   };
 };
 
-module.exports.createUser = async (event) => {
+module.exports.saveTicket = async (event) => {
   const body = JSON.parse(event.body);
   // Here you would typically save the user to a database
   return {

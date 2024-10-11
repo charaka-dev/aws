@@ -1,3 +1,4 @@
+
 service: awd-web-hook-service
 
 provider:
@@ -13,6 +14,31 @@ provider:
 
 resources:
   Resources:
+    ApiGatewayRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:service}-${self:provider.stage}-api-gateway-role
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - apigateway.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: ApiGatewayPolicy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - cognito-idp:AdminInitiateAuth
+                  Resource: !GetAtt UserPool.Arn
+                - Effect: Allow
+                  Action: lambda:InvokeFunction
+                  Resource: !GetAtt HelloLambdaFunction.Arn
+
     ApiGatewayAuthorizer:
       Type: AWS::ApiGateway::Authorizer
       Properties:
@@ -22,6 +48,7 @@ resources:
         RestApiId: !Ref ApiGatewayRestApi
         ProviderARNs:
           - !GetAtt UserPool.Arn
+
     AwdResourceServer:
       Type: AWS::Cognito::UserPoolResourceServer
       Properties:
@@ -31,6 +58,7 @@ resources:
         Scopes: 
           - ScopeName: "write"
             ScopeDescription: "Write access"
+
     UserPool:
       Type: AWS::Cognito::UserPool
       Properties:
@@ -39,6 +67,7 @@ resources:
           - email
         UsernameAttributes:
           - email
+
     UserPoolDomain:
       Type: AWS::Cognito::UserPoolDomain
       Properties:
@@ -75,6 +104,7 @@ resources:
           gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
         ResponseType: DEFAULT_4XX
         RestApiId: !Ref ApiGatewayRestApi
+
   Outputs:
     UserPoolId:
       Value: !Ref UserPool
@@ -84,6 +114,7 @@ resources:
       Value: !Sub https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
     TokenUrl:
       Value: !Sub https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com/oauth2/token
+# post function with url  awd/v1/tickets
 
 functions:
   hello:
@@ -100,19 +131,20 @@ functions:
     environment:
       USER_POOL_ID: !Ref UserPool
       CLIENT_ID: !Ref UserPoolClient
-
-  # createUser:
-  #   handler: handler.createUser
-  #   events:
-  #     - http:
-  #         path: users
-  #         method: post
-  #         authorizer:
-  #           type: COGNITO_USER_POOLS
-  #           authorizerId: !Ref ApiGatewayAuthorizer
-  #   environment:
-  #     USER_POOL_ID: !Ref UserPool
-  #     CLIENT_ID: !Ref UserPoolClient
+  saveTicket:
+    handler: handler.saveTicket
+    events:
+      - http:
+          path: v1/awd/tickets
+          method: post
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref ApiGatewayAuthorizer
+            scopes:
+              - "awd.datacom.com/write"
+    environment:
+      USER_POOL_ID: !Ref UserPool
+      CLIENT_ID: !Ref UserPoolClient 
 
 plugins:
   - serverless-offline
