@@ -35,17 +35,17 @@ resources:
                   - apigateway.amazonaws.com
               Action: sts:AssumeRole
         Policies:
-          - PolicyName: ApiGatewayPolicy
+          - PolicyName: ApiGatewayPolicy ## Inclinde policy created to use in above role
             PolicyDocument:
               Version: '2012-10-17'
               Statement:
                 - Effect: Allow
                   Action:
-                    - cognito-idp:AdminInitiateAuth
+                    - cognito-idp:AdminInitiateAuth ## Policy enforce to access Oauth Call
                   Resource: 
-                    Fn::GetAtt: [UserPool, Arn]
+                    Fn::GetAtt: [UserPool, Arn] ## Since resource is dynamic this syntax imply the UserPool ARN
                 - Effect: Allow
-                  Action: lambda:InvokeFunction
+                  Action: lambda:InvokeFunction ## Policy enforce to invoke Lambda fn from ApiGateway
                   Resource: 
                     Fn::GetAtt: [SaveTicketLambdaFunction, Arn]
 
@@ -77,7 +77,7 @@ resources:
 
     UserPoolClient:
       Type: AWS::Cognito::UserPoolClient
-      DependsOn: AwdResourceServer
+      DependsOn: AwdResourceServer ## Resource server is should be created before the UPclient
       Properties:
         ClientName: ${self:service}-${self:provider.stage}-client
         UserPoolId: !Ref UserPool
